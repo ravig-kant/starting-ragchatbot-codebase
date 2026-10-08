@@ -22,6 +22,42 @@
     --focus-ring: rgba(37, 99, 235, 0.2);
     --welcome-bg: #1e3a5f;
     --welcome-border: #2563eb;
+    --code-bg: rgba(0, 0, 0, 0.2);
+    --welcome-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    --error-color: #f87171;
+    --success-color: #4ade80;
+    color-scheme: dark;
+}
+
+/* Light theme overrides */
+:root[data-theme="light"] {
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --background: #f1f5f9;
+    --surface: #ffffff;
+    --surface-hover: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: #cbd5e1;
+    --user-message: #2563eb;
+    --assistant-message: #e2e8f0;
+    --shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.1);
+    --focus-ring: rgba(37, 99, 235, 0.3);
+    --welcome-bg: #eff6ff;
+    --welcome-border: #2563eb;
+    --code-bg: rgba(15, 23, 42, 0.06);
+    --welcome-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+    --error-color: #b91c1c;
+    --success-color: #15803d;
+    color-scheme: light;
+}
+
+/* Applied briefly while switching themes so colors fade instead of snapping */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
 }
 
 /* Base Styles */
@@ -327,7 +363,7 @@ a.source-chip:hover .source-icon {
 }
 
 .message-content code {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--code-bg);
     padding: 0.125rem 0.25rem;
     border-radius: 3px;
     font-family: 'Fira Code', 'Consolas', monospace;
@@ -335,7 +371,7 @@ a.source-chip:hover .source-icon {
 }
 
 .message-content pre {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--code-bg);
     padding: 0.75rem;
     border-radius: 4px;
     overflow-x: auto;
@@ -348,7 +384,7 @@ a.source-chip:hover .source-icon {
 }
 
 .message-content blockquote {
-    border-left: 3px solid var(--primary);
+    border-left: 3px solid var(--primary-color);
     padding-left: 1rem;
     margin: 0.5rem 0;
     color: var(--text-secondary);
@@ -358,7 +394,7 @@ a.source-chip:hover .source-icon {
 .message.welcome-message .message-content {
     background: var(--surface);
     border: 2px solid var(--border-color);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--welcome-shadow);
     position: relative;
 }
 
@@ -478,7 +514,7 @@ a.source-chip:hover .source-icon {
 /* Error Message */
 .error-message {
     background: rgba(239, 68, 68, 0.1);
-    color: #f87171;
+    color: var(--error-color);
     padding: 0.75rem 1.25rem;
     border-radius: 8px;
     border: 1px solid rgba(239, 68, 68, 0.2);
@@ -488,7 +524,7 @@ a.source-chip:hover .source-icon {
 /* Success Message */
 .success-message {
     background: rgba(34, 197, 94, 0.1);
-    color: #4ade80;
+    color: var(--success-color);
     padding: 0.75rem 1.25rem;
     border-radius: 8px;
     border: 1px solid rgba(34, 197, 94, 0.2);
@@ -715,6 +751,75 @@ details[open] .suggested-header::before {
     border-color: var(--primary-color);
     color: var(--primary-color);
     transform: translateX(2px);
+}
+
+/* Theme Toggle */
+.theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 100;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    color: var(--text-primary);
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.theme-toggle:hover {
+    background: var(--surface-hover);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: translateY(-1px);
+}
+
+.theme-toggle:focus {
+    outline: none;
+}
+
+.theme-toggle:focus-visible {
+    box-shadow: 0 0 0 3px var(--focus-ring);
+    border-color: var(--primary-color);
+}
+
+.theme-icon {
+    position: absolute;
+    transition: transform 0.4s ease, opacity 0.3s ease;
+}
+
+/* Dark theme shows the sun (switch to light); light theme shows the moon */
+.theme-icon-moon {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+}
+
+:root[data-theme="light"] .theme-icon-sun {
+    opacity: 0;
+    transform: rotate(90deg) scale(0.5);
+}
+
+:root[data-theme="light"] .theme-icon-moon {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .theme-icon,
+    .theme-transition,
+    .theme-transition *,
+    .theme-transition *::before,
+    .theme-transition *::after {
+        transition: none !important;
+    }
 }
 
 /* Responsive Design */

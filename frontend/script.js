@@ -6,7 +6,7 @@ let currentSessionId = null;
 let currentAbortController = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, newChatButton, totalCourses, courseTitles;
+let chatMessages, chatInput, sendButton, newChatButton, themeToggle, totalCourses, courseTitles;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,9 +15,11 @@ document.addEventListener('DOMContentLoaded', () => {
     chatInput = document.getElementById('chatInput');
     sendButton = document.getElementById('sendButton');
     newChatButton = document.getElementById('newChatButton');
+    themeToggle = document.getElementById('themeToggle');
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
     
+    updateThemeToggleLabel();
     setupEventListeners();
     createNewSession();
     loadCourseStats();
@@ -33,6 +35,9 @@ function setupEventListeners() {
 
     // New chat
     newChatButton.addEventListener('click', startNewChat);
+
+    // Theme toggle
+    themeToggle.addEventListener('click', toggleTheme);
 
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
@@ -199,6 +204,38 @@ function startNewChat() {
     chatInput.disabled = false;
     sendButton.disabled = false;
     chatInput.focus();
+}
+
+// Theme Functions
+let themeTransitionTimer = null;
+
+function getCurrentTheme() {
+    return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+}
+
+function toggleTheme() {
+    const nextTheme = getCurrentTheme() === 'light' ? 'dark' : 'light';
+    const root = document.documentElement;
+
+    // Fade colors across the whole page only while switching
+    root.classList.add('theme-transition');
+    root.setAttribute('data-theme', nextTheme);
+    clearTimeout(themeTransitionTimer);
+    themeTransitionTimer = setTimeout(() => root.classList.remove('theme-transition'), 300);
+
+    try {
+        localStorage.setItem('theme', nextTheme);
+    } catch (e) {
+        // Storage unavailable (e.g. private mode) - theme still applies for this page
+    }
+    updateThemeToggleLabel();
+}
+
+// Keep the button's accessible name describing the action it will perform
+function updateThemeToggleLabel() {
+    const label = getCurrentTheme() === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+    themeToggle.setAttribute('aria-label', label);
+    themeToggle.setAttribute('title', label);
 }
 
 // Load course statistics
