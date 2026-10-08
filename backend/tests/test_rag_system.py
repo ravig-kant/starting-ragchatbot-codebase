@@ -1,5 +1,3 @@
-import os
-
 import pytest
 
 from conftest import FIXTURE_COURSE_TITLE, text_block, tool_use_block, message
@@ -105,36 +103,3 @@ class TestContentQuery:
         ]
         assert temp_rag.tool_manager.get_last_sources() == []
 
-
-class TestQueryEndpoint:
-    @pytest.fixture
-    def client(self, monkeypatch):
-        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        monkeypatch.chdir(backend_dir)  # app.py uses paths relative to backend/
-        import app as app_module
-        from fastapi.testclient import TestClient
-        return app_module, TestClient(app_module.app)
-
-    def test_returns_answer_and_sources(self, client, monkeypatch):
-        app_module, http = client
-        monkeypatch.setattr(
-            app_module.rag_system, "query",
-            lambda q, sid: ("answer", [{"label": "Course - Lesson 1", "link": "https://x"}]),
-        )
-        r = http.post("/api/query", json={"query": "q"})
-        assert r.status_code == 200
-        body = r.json()
-        assert body["answer"] == "answer"
-        assert body["sources"] == [{"label": "Course - Lesson 1", "link": "https://x"}]
-        assert body["session_id"]
-
-    def test_rag_exception_becomes_500_with_detail(self, client, monkeypatch):
-        app_module, http = client
-
-        def boom(q, sid):
-            raise IndexError("list index out of range")
-
-        monkeypatch.setattr(app_module.rag_system, "query", boom)
-        r = http.post("/api/query", json={"query": "q"})
-        assert r.status_code == 500
-        assert r.json()["detail"] == "list index out of range"

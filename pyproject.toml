@@ -16,5 +16,14 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend", "backend/tests"]
+addopts = "-ra --strict-markers"
+filterwarnings = [
+    "ignore:resource_tracker:UserWarning",
 ]

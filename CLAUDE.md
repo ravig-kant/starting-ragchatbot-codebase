@@ -14,9 +14,10 @@ Requires Python 3.13+ and `uv`. Put `ANTHROPIC_API_KEY` in a root `.env` file (s
 uv sync                                             # install deps
 ./run.sh                                            # start server (http://localhost:8000, API docs at /docs)
 cd backend && uv run uvicorn app:app --reload --port 8000   # manual start
+uv run pytest                                       # run tests (config in pyproject.toml; works from root or backend/)
 ```
 
-There are no tests, linters, or formatters set up yet.
+Tests live in `backend/tests/`. API tests (`test_api.py`) use `build_test_app()` from `conftest.py`, a copy of `app.py`'s endpoints with a mock `RAGSystem` and a temp static dir, because importing `app.py` builds a real RAG system and mounts `../frontend`. If you change an endpoint in `app.py`, make the same change in `build_test_app()`. There are no linters or formatters set up yet.
 
 **Always use `uv`; never call `pip` or `python` directly.**
 - Run Python files with `uv run python <file>.py` (or `uv run <tool>`).
