@@ -16,7 +16,16 @@ uv sync                                             # install deps
 cd backend && uv run uvicorn app:app --reload --port 8000   # manual start
 ```
 
-There are no tests, linters, or formatters set up yet.
+Code quality (dev deps: black, isort, flake8, pytest; config in `pyproject.toml` and `.flake8`):
+
+```bash
+./scripts/format.sh                                 # auto-format: isort + black
+./scripts/lint.sh                                   # check only: isort/black --check + flake8
+./scripts/quality.sh                                # lint.sh + pytest (run before committing)
+cd backend && uv run pytest                         # tests only
+```
+
+Black owns line length (88), so flake8 ignores E501 and the black-incompatible rules.
 
 **Always use `uv`; never call `pip` or `python` directly.**
 - Run Python files with `uv run python <file>.py` (or `uv run <tool>`).
