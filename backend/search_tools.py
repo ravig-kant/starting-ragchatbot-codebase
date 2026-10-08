@@ -89,7 +89,8 @@ class CourseSearchTool(Tool):
         """Format search results with course and lesson context"""
         formatted = []
         sources = []  # Track sources for the UI
-        
+        seen_labels = set()
+
         for doc, meta in zip(results.documents, results.metadata):
             course_title = meta.get('course_title', 'unknown')
             lesson_num = meta.get('lesson_number')
@@ -100,11 +101,17 @@ class CourseSearchTool(Tool):
                 header += f" - Lesson {lesson_num}"
             header += "]"
             
-            # Track source for the UI
-            source = course_title
+            # Track source for the UI (label plus lesson/course link, deduplicated)
+            label = course_title
             if lesson_num is not None:
-                source += f" - Lesson {lesson_num}"
-            sources.append(source)
+                label += f" - Lesson {lesson_num}"
+            if label not in seen_labels:
+                seen_labels.add(label)
+                if lesson_num is not None:
+                    link = self.store.get_lesson_link(course_title, lesson_num)
+                else:
+                    link = self.store.get_course_link(course_title)
+                sources.append({"label": label, "link": link})
             
             formatted.append(f"{header}\n{doc}")
         
@@ -113,11 +120,65 @@ class CourseSearchTool(Tool):
         
         return "\n\n".join(formatted)
 
+
+class CourseOutlineTool(Tool):
+    """Tool for retrieving a course outline (title, link, lesson list) from the course catalog"""
+
+    def __init__(self, vector_store: VectorStore):
+        self.store = vector_store
+        self.last_sources = []  # Track sources from last lookup
+
+    def get_tool_definition(self) -> Dict[str, Any]:
+        """Return Anthropic tool definition for this tool"""
+        return {
+            "name": "get_course_outline",
+            "description": "Get a course's outline: title, course link, and the complete list of lessons (number and title)",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "course_title": {
+                        "type": "string",
+                        "description": "Course title (partial matches work, e.g. 'MCP', 'Introduction')"
+                    }
+                },
+                "required": ["course_title"]
+            }
+        }
+
+    def execute(self, course_title: str) -> str:
+        """
+        Look up the outline for a course.
+
+        Args:
+            course_title: Course title or partial name
+
+        Returns:
+            Formatted course outline or error message
+        """
+        outline = self.store.get_course_outline(course_title)
+        if not outline:
+            return f"No course found matching '{course_title}'."
+
+        lines = [
+            f"Course Title: {outline['title']}",
+            f"Course Link: {outline['course_link'] or 'N/A'}",
+            f"Lessons ({len(outline['lessons'])}):"
+        ]
+        for lesson in outline['lessons']:
+            lines.append(f"- Lesson {lesson.get('lesson_number')}: {lesson.get('lesson_title')}")
+
+        # Store source for retrieval
+        self.last_sources = [{"label": outline['title'], "link": outline['course_link']}]
+
+        return "\n".join(lines)
+
+
 class ToolManager:
     """Manages available tools for the AI"""
     
     def __init__(self):
         self.tools = {}
+        self._sources = []  # Sources accumulated across all tool calls for the current query
     
     def register_tool(self, tool: Tool):
         """Register any tool that implements the Tool interface"""
@@ -137,18 +198,29 @@ class ToolManager:
         if tool_name not in self.tools:
             return f"Tool '{tool_name}' not found"
         
-        return self.tools[tool_name].execute(**kwargs)
+        tool = self.tools[tool_name]
+        # Clear leftovers so only this call's sources are collected
+        if hasattr(tool, 'last_sources'):
+            tool.last_sources = []
+
+        result = tool.execute(**kwargs)
+
+        # Accumulate sources across calls (e.g. multiple tool rounds), skipping duplicate labels
+        seen_labels = {source["label"] for source in self._sources}
+        for source in getattr(tool, 'last_sources', []):
+            if source["label"] not in seen_labels:
+                seen_labels.add(source["label"])
+                self._sources.append(source)
+
+        return result
     
     def get_last_sources(self) -> list:
-        """Get sources from the last search operation"""
-        # Check all tools for last_sources attribute
-        for tool in self.tools.values():
-            if hasattr(tool, 'last_sources') and tool.last_sources:
-                return tool.last_sources
-        return []
+        """Get sources from all tool calls since the last reset"""
+        return list(self._sources)
 
     def reset_sources(self):
         """Reset sources from all tools that track sources"""
+        self._sources = []
         for tool in self.tools.values():
             if hasattr(tool, 'last_sources'):
                 tool.last_sources = []

@@ -20,6 +20,7 @@ class Config:
     CHUNK_OVERLAP: int = 100     # Characters to overlap between chunks
     MAX_RESULTS: int = 5         # Maximum search results to return
     MAX_HISTORY: int = 2         # Number of conversation messages to remember
+    MAX_TOOL_ROUNDS: int = 2     # Maximum sequential tool-calling rounds per query
     
     # Database paths
     CHROMA_PATH: str = "./chroma_db"  # ChromaDB storage location
