@@ -16,5 +16,23 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "black>=26.10.0",
+    "flake8>=7.4.1",
+    "isort>=9.0.2",
     "pytest>=9.1.1",
 ]
+
+[tool.black]
+line-length = 88
+target-version = ["py313"]
+extend-exclude = '''
+/(
+    backend/chroma_db
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+src_paths = ["backend"]
+skip_glob = ["backend/chroma_db/*"]

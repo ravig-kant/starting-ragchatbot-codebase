@@ -12,8 +12,7 @@ if BACKEND_DIR not in sys.path:
     sys.path.insert(0, BACKEND_DIR)
 
 from config import config  # noqa: E402
-from vector_store import VectorStore, SearchResults  # noqa: E402
-
+from vector_store import SearchResults, VectorStore  # noqa: E402
 
 FIXTURE_COURSE_TITLE = "Testing Fundamentals with Pytest"
 FIXTURE_COURSE_LINK = "https://example.com/courses/pytest"
@@ -38,22 +37,29 @@ Mocking replaces real collaborators with fake objects. The unittest.mock module 
 
 # ---------- Search result helpers ----------
 
+
 @pytest.fixture
 def make_results():
     def _make(docs, metas, error=None):
-        return SearchResults(documents=docs, metadata=metas, distances=[0.1] * len(docs), error=error)
+        return SearchResults(
+            documents=docs, metadata=metas, distances=[0.1] * len(docs), error=error
+        )
+
     return _make
 
 
 @pytest.fixture
 def mock_store():
     store = MagicMock(spec=VectorStore)
-    store.get_lesson_link.side_effect = lambda title, n: f"https://example.com/{title}/lesson/{n}"
+    store.get_lesson_link.side_effect = (
+        lambda title, n: f"https://example.com/{title}/lesson/{n}"
+    )
     store.get_course_link.side_effect = lambda title: f"https://example.com/{title}"
     return store
 
 
 # ---------- Fake Anthropic message objects ----------
+
 
 def text_block(text):
     return SimpleNamespace(type="text", text=text)
@@ -68,6 +74,7 @@ def message(content, stop_reason="end_turn"):
 
 
 # ---------- Real (temporary) store and RAG system ----------
+
 
 @pytest.fixture(scope="session")
 def course_file(tmp_path_factory):
@@ -88,6 +95,7 @@ def test_config(tmp_path_factory):
 @pytest.fixture(scope="session")
 def _rag_session(test_config, course_file):
     from rag_system import RAGSystem
+
     rag = RAGSystem(test_config)
     course, n_chunks = rag.add_course_document(course_file)
     assert course is not None and n_chunks > 0, "fixture course failed to ingest"
