@@ -22,10 +22,12 @@ Code quality (dev deps: black, isort, flake8, pytest; config in `pyproject.toml`
 ./scripts/format.sh                                 # auto-format: isort + black
 ./scripts/lint.sh                                   # check only: isort/black --check + flake8
 ./scripts/quality.sh                                # lint.sh + pytest (run before committing)
-cd backend && uv run pytest                         # tests only
+uv run pytest                                       # tests only (works from root or backend/)
 ```
 
 Black owns line length (88), so flake8 ignores E501 and the black-incompatible rules.
+
+Tests live in `backend/tests/`. API tests (`test_api.py`) use `build_test_app()` from `conftest.py`, a copy of `app.py`'s endpoints with a mock `RAGSystem` and a temp static dir, because importing `app.py` builds a real RAG system and mounts `../frontend`. If you change an endpoint in `app.py`, make the same change in `build_test_app()`.
 
 **Always use `uv`; never call `pip` or `python` directly.**
 - Run Python files with `uv run python <file>.py` (or `uv run <tool>`).

@@ -113,3 +113,106 @@ def temp_rag(_rag_session):
 @pytest.fixture
 def real_store(_rag_session):
     return _rag_session.vector_store
+
+
+# ---------- API test app ----------
+# app.py builds a real RAGSystem and mounts ../frontend at import time, so the API tests
+# use this mirror of its endpoints with an injectable rag_system and static directory.
+
+FIXTURE_INDEX_HTML = (
+    "<!doctype html><html><body><h1>Course Materials Assistant</h1></body></html>"
+)
+
+
+def build_test_app(rag_system, static_dir=None):
+    from typing import List, Optional
+
+    from fastapi import FastAPI, HTTPException
+    from fastapi.staticfiles import StaticFiles
+    from pydantic import BaseModel
+
+    class QueryRequest(BaseModel):
+        query: str
+        session_id: Optional[str] = None
+
+    class Source(BaseModel):
+        label: str
+        link: Optional[str] = None
+
+    class QueryResponse(BaseModel):
+        answer: str
+        sources: List[Source]
+        session_id: str
+
+    class CourseStats(BaseModel):
+        total_courses: int
+        course_titles: List[str]
+
+    app = FastAPI(title="Course Materials RAG System (test)")
+
+    @app.post("/api/query", response_model=QueryResponse)
+    async def query_documents(request: QueryRequest):
+        try:
+            session_id = request.session_id
+            if not session_id:
+                session_id = rag_system.session_manager.create_session()
+            answer, sources = rag_system.query(request.query, session_id)
+            return QueryResponse(answer=answer, sources=sources, session_id=session_id)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/courses", response_model=CourseStats)
+    async def get_course_stats():
+        try:
+            analytics = rag_system.get_course_analytics()
+            return CourseStats(
+                total_courses=analytics["total_courses"],
+                course_titles=analytics["course_titles"],
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.delete("/api/session/{session_id}")
+    async def delete_session(session_id: str):
+        rag_system.session_manager.delete_session(session_id)
+        return {"status": "ok"}
+
+    if static_dir is not None:
+        app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+
+    return app
+
+
+@pytest.fixture
+def mock_rag():
+    """MagicMock RAGSystem with canned query/analytics responses"""
+    rag = MagicMock()
+    rag.session_manager.create_session.return_value = "session_1"
+    rag.query.return_value = (
+        "Fixtures provide reusable setup.",
+        [
+            {
+                "label": f"{FIXTURE_COURSE_TITLE} - Lesson 1",
+                "link": "https://example.com/courses/pytest/lesson/1",
+            }
+        ],
+    )
+    rag.get_course_analytics.return_value = {
+        "total_courses": 1,
+        "course_titles": [FIXTURE_COURSE_TITLE],
+    }
+    return rag
+
+
+@pytest.fixture
+def static_dir(tmp_path):
+    (tmp_path / "index.html").write_text(FIXTURE_INDEX_HTML)
+    return str(tmp_path)
+
+
+@pytest.fixture
+def api_client(mock_rag, static_dir):
+    from fastapi.testclient import TestClient
+
+    with TestClient(build_test_app(mock_rag, static_dir)) as client:
+        yield client
