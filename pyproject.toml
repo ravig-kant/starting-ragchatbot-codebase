@@ -13,3 +13,35 @@ dependencies = [
     "python-multipart==0.0.20",
     "python-dotenv==1.1.1",
 ]
+
+[dependency-groups]
+dev = [
+    "black>=26.10.0",
+    "flake8>=7.4.1",
+    "httpx>=0.28.1",
+    "isort>=9.0.2",
+    "pytest>=9.1.1",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py313"]
+extend-exclude = '''
+/(
+    backend/chroma_db
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+src_paths = ["backend"]
+skip_glob = ["backend/chroma_db/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend", "backend/tests"]
+addopts = "-ra --strict-markers"
+filterwarnings = [
+    "ignore:resource_tracker:UserWarning",
+]
